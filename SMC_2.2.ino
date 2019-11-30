@@ -5,7 +5,7 @@
 const char* ssid = "VARGAS_2G";
 const char* password = "Q2019cpx";
 #define sensor 4
-#define full 13
+#define full 21
 
 #define ORG "mvm1bx"
 #define DEVICE_TYPE "ESP32"
