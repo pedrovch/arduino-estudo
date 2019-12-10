@@ -1,17 +1,23 @@
+//Blibliotecas para conexão com servidor
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>
 
-const char* ssid = "VARGAS_2G";
-const char* password = "Q2019cpx";
+//Senha e login do Wi-fi
+const char* ssid = "";
+const char* password = "";
+
+//Pinos dos sensores utilizados
 #define sensor 4
 #define full 21
 
+//definição da ID do microcontrolador
 #define ORG "mvm1bx"
 #define DEVICE_TYPE "ESP32"
 #define DEVICE_ID "E43A17286F24"
 #define TOKEN "0MZbDqpffW*DpzmATr"
 
+//conexão com banco de dados
 char server[] = ORG ".messaging.internetofthings.ibmcloud.com";
 char pubTopic1[] = "iot-2/evt/status1/fmt/json";
 char pubTopic2[] = "iot-2/evt/status2/fmt/json";
@@ -21,6 +27,8 @@ char clientId[] = "d:" ORG ":" DEVICE_TYPE ":" DEVICE_ID;
 
 WiFiClient wifiClient;
 PubSubClient client(server, 1883, NULL, wifiClient);
+
+//variaveis de controle dos sensores
 volatile double waterFlow;
 volatile double currentf;
 int ftank = 0;
@@ -30,7 +38,11 @@ void setup() {
 
   waterFlow = 0;
   currentf = 0;
+  
+  //usado para ativação do sensor de fluxo
   attachInterrupt(digitalPinToInterrupt(4), pulse, RISING);
+  
+  //conecta o Wi-fi
   Serial.print("Connecting to ");
   Serial.print(ssid);
   WiFi.begin(ssid, password);
@@ -43,6 +55,7 @@ void setup() {
   Serial.print("WiFi connected, IP address: ");
   Serial.println(WiFi.localIP());
 
+  //conecta ao banco de dados
   if (!client.connected()) {
     Serial.print("Reconnecting client to ");
     Serial.println(server);
@@ -56,9 +69,11 @@ void setup() {
 
 long lastMsg = 0;
 void loop() {
+  // muda o tipo da variavel dos dados recebidos pelo sensor para melhor leitura
   float m = waterFlow;
   float c = currentf;
 
+  // cria o alerta de tanque cheio
   if (digitalRead(full) == HIGH) {
     while (digitalRead(full) == HIGH); // espera soltar o bt
     ftank = 1;
@@ -69,11 +84,11 @@ void loop() {
     ftank = 0;
   }
 
-
+// envio dos dados lidos para o banco de dados
   client.loop();
   long now = millis();
 
-
+// envio da primeira variavel de fluxo, para a media de fluxo
   if (now - lastMsg > 3000) {
     lastMsg = now;
     Serial.print("fluxo de agua:");
@@ -92,7 +107,7 @@ void loop() {
     } else {
       Serial.println("Publish1 failed");
     }
-
+//envio da segunda variavel de fluxo, para o fluxo atual
     String payload2 = "{\"d\":{\"currentf\":";;
     payload2 += c;
     payload2 += "}}";
@@ -105,7 +120,7 @@ void loop() {
     } else {
       Serial.println("Publish2 failed");
     }
-
+// envio do alerta de tanque cheio
     String payload3 = "{\"d\":{\"alerta\":";; // alerta de tanque cheio
     payload3 += ftank;
     payload3 += "}}";
@@ -120,7 +135,7 @@ void loop() {
     }
   }
 }
-void pulse()   //measure the quantity of square wave
+void pulse()   //calculo de quanto liquido passa pelo sensor
 {
   waterFlow += 1.0 / 5880.0;
   currentf += 1.0 / 5880.0;
